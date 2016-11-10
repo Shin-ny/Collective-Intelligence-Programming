@@ -17,7 +17,13 @@ def getwordcounts(url):
 		for word in words:
 			wc.setdefault(word, 0)
 			wc[word] += 1
-	return d.feed.title, wc
+	try:
+		# In case there is no title: (spend a lot time debug this :-( )
+		if d.feed.title == '':
+			print url
+		return d.feed.title, wc
+	except AttributeError:
+		print url
 
 def getwords(html):
 	# Remove all the HTML tags
@@ -57,6 +63,7 @@ for word in wordlist: out.write('\t%s' % word)
 out.write('\n')
 for blog,wc in wordcounts.items():
     out.write(blog)
+    print blog
     for word in wordlist:
         if word in wc: out.write('\t%d' % wc[word])
         else: out.write('\t0')
