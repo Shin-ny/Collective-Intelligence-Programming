@@ -18,6 +18,7 @@ critics={'Lisa Rose': {'Lady in the Water': 2.5, 'Snakes on a Plane': 3.5,
         'The Night Listener': 3.0, 'Superman Returns': 5.0, 'You, Me and Dupree': 3.5},
         'Toby': {'Snakes on a Plane':4.5,'You, Me and Dupree':1.0,'Superman Returns':4.0}}
 
+
 from math import sqrt
 # Returns a distance-based similarity score for person1 and person2
 def sim_distance(prefs,person1,person2):
