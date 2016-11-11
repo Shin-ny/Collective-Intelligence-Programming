@@ -165,8 +165,8 @@ def drawdendrogram(clust, labels, jpeg="clusters.jpg"):
 	img.save(jpeg,'JPEG')
 
 
-def drawkclusters(clust, labels, jpeg="clusters.jpg"):
-	h = len(labels) * 20
+def drawkclusters(clust, labels, jpeg="clusters.jpg", size = 20):
+	h = len(labels) * size
 	w = 600
 
 	# Create a new image with a white background
@@ -174,20 +174,20 @@ def drawkclusters(clust, labels, jpeg="clusters.jpg"):
 	draw = ImageDraw.Draw(img)
 
 	# The very left first small horizontal line in the middle of the height
-	draw.line((0, h/2, 50, h/2), fill=(0, 0, 0))
+	draw.line((20, h/2, 60, h/2), fill=(0, 0, 0))
 
 	# Draw the first node
-	drawnodekclusters(draw, clust, 50, (h/2), labels)
+	drawnodekclusters(draw, clust, 60, labels, size)
 	img.save(jpeg,'JPEG')
 
-def drawnodekclusters(draw, clust, kx, ky, labels):
+def drawnodekclusters(draw, clust, kx, labels, size):
 	height = []
 	for i in clust:
 		height.append(len(i))
 	print height
 
-	y1 = height[0] * 10
-	y2 = len(labels) * 20 - height[len(clust)-1] * 10
+	y1 = height[0] * size / 2
+	y2 = len(labels) * size - height[len(clust)-1] * size / 2
 	# Vertical line from this cluster to children
 	draw.line((kx,y1,kx,y2),fill=(255,0,0))
 	
@@ -196,27 +196,27 @@ def drawnodekclusters(draw, clust, kx, ky, labels):
 	while(j < len(height) - 1):
 		# The second very left horizontal line:
 		draw.line((kx, y1, 150, y1), fill=(0, 0, 0))
-		draw.line((150,y1 + (height[j] - 1) * 9, 150, y1 - (height[j] - 1) * 9),fill=(255,0,0))
-		tip = y1 - (height[j] - 1) * 9
+		draw.line((150,y1 + (height[j] - 1) * (size / 2 - 1), 150, y1 - (height[j] - 1) * (size / 2 - 1)),fill=(255,0,0))
+		tip = y1 - (height[j] - 1) * (size / 2 - 1)
 		for x in range(height[j]):
 			draw.line((150, tip, 250, tip), fill=(0, 0, 0))
 			draw.text((250+5,tip-7),labels[clust[j][x]],(0,0,0))
-			tip += 18
+			tip += size - 2
 
-		y1 +=  (height[j] + height[j + 1]) * 10
+		y1 +=  (height[j] + height[j + 1]) * size / 2
 		j += 1
 
 	# The last horizontal line of the second very left
 	draw.line((kx, y2, 150, y2), fill=(0, 0, 0))
 
 	# The last cluster
-	draw.line((150,y2 + (height[len(height) - 1] - 1) * 9, 150, y2 - (height[len(height) - 1] - 1) * 9),fill=(255,0,0))
+	draw.line((150,y2 + (height[j] - 1) * (size / 2 - 1), 150, y2 - (height[j] - 1) * (size / 2 - 1)),fill=(255,0,0))
 	
-	tip = y2 - (height[len(height) - 1] - 1) * 9
-	for x in range(height[len(height) - 1]):
+	tip = y2 - (height[j] - 1) * (size / 2 - 1)
+	for x in range(height[j]):
 		draw.line((150, tip, 250, tip), fill=(0, 0, 0))
-		draw.text((250+5,tip-7),labels[clust[len(height) - 1][x]],(0,0,0))
-		tip += 18
+		draw.text((250+5,tip-7),labels[clust[j][x]],(0,0,0))
+		tip += size - 2
 
 
 
