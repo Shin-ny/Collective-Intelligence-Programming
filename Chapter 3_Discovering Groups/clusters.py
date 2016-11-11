@@ -1,4 +1,6 @@
 from PIL import Image,ImageDraw
+import random
+
 def readfile(filename):
 	lines = [line for line in file(filename)]
 
@@ -54,7 +56,6 @@ def test(rows,rownames):
   	print rownames[i]
   	print len(rows[i])
   	i = i-1
-
 
 
 def hcluster(rows,distance=pearson):
@@ -127,12 +128,6 @@ def rotatematrix(data):
   return newdata
 		
 
-
-
-
-
-
-
 # how long is the vertical line?
 def getheight(clust):
 	# Is this an endpoint? Then the height is just 1
@@ -170,6 +165,63 @@ def drawdendrogram(clust, labels, jpeg="clusters.jpg"):
 	img.save(jpeg,'JPEG')
 
 
+def drawkclusters(clust, labels, jpeg="clusters.jpg"):
+	h = len(labels) * 20
+	w = 600
+
+	# Create a new image with a white background
+	img = Image.new('RGB', (w, h), (255, 255, 255))
+	draw = ImageDraw.Draw(img)
+
+	# The very left first small horizontal line in the middle of the height
+	draw.line((0, h/2, 50, h/2), fill=(0, 0, 0))
+
+	# Draw the first node
+	drawnodekclusters(draw, clust, 50, (h/2), labels)
+	img.save(jpeg,'JPEG')
+
+def drawnodekclusters(draw, clust, kx, ky, labels):
+	height = []
+	for i in clust:
+		height.append(len(i))
+	print height
+
+	y1 = height[0] * 10
+	y2 = len(labels) * 20 - height[len(clust)-1] * 10
+	# Vertical line from this cluster to children
+	draw.line((kx,y1,kx,y2),fill=(255,0,0))
+	
+	
+	j = 0
+	while(j < len(height) - 1):
+		# The second very left horizontal line:
+		draw.line((kx, y1, 150, y1), fill=(0, 0, 0))
+		draw.line((150,y1 + (height[j] - 1) * 9, 150, y1 - (height[j] - 1) * 9),fill=(255,0,0))
+		tip = y1 - (height[j] - 1) * 9
+		for x in range(height[j]):
+			draw.line((150, tip, 250, tip), fill=(0, 0, 0))
+			draw.text((250+5,tip-7),labels[clust[j][x]],(0,0,0))
+			tip += 18
+
+		y1 +=  (height[j] + height[j + 1]) * 10
+		j += 1
+
+	# The last horizontal line of the second very left
+	draw.line((kx, y2, 150, y2), fill=(0, 0, 0))
+
+	# The last cluster
+	draw.line((150,y2 + (height[len(height) - 1] - 1) * 9, 150, y2 - (height[len(height) - 1] - 1) * 9),fill=(255,0,0))
+	
+	tip = y2 - (height[len(height) - 1] - 1) * 9
+	for x in range(height[len(height) - 1]):
+		draw.line((150, tip, 250, tip), fill=(0, 0, 0))
+		draw.text((250+5,tip-7),labels[clust[len(height) - 1][x]],(0,0,0))
+		tip += 18
+
+
+
+
+
 def drawnode(draw,clust,x,y,scaling,labels):
   
   # If this is not an endpoint: there should be line.
@@ -198,6 +250,47 @@ def drawnode(draw,clust,x,y,scaling,labels):
   else:
     # If this is an endpoint, draw the item label
     draw.text((x+5,y-7),labels[clust.id],(0,0,0))
+
+
+def kcluster(rows,distance=pearson,k=4):
+  # Determine the minimum and maximum values for each point
+  ranges=[(min([row[i] for row in rows]),max([row[i] for row in rows]))
+  for i in range(len(rows[0]))]
+
+  # Create k randomly placed centroids
+  clusters=[[random.random( )*(ranges[i][1]-ranges[i][0])+ranges[i][0] 
+  			for i in range(len(rows[0]))] for j in range(k)]
+
+  lastmatches=None
+  for t in range(100):
+    print 'Iteration %d' % t
+    bestmatches=[[] for i in range(k)]
+
+    # Find which centroid is the closest for each row
+    for j in range(len(rows)):
+      row=rows[j]
+      bestmatch=0
+      for i in range(k):
+        d=distance(clusters[i],row)
+        if d<distance(clusters[bestmatch],row): bestmatch=i
+      bestmatches[bestmatch].append(j)
+
+    # If the results are the same as last time, this is complete
+    if bestmatches==lastmatches: break
+    lastmatches=bestmatches
+
+  # Move the centroids to the average of their members
+  for i in range(k):
+	avgs=[0.0]*len(rows[0])
+	if len(bestmatches[i])>0:
+	  for rowid in bestmatches[i]:
+	    for m in range(len(rows[rowid])):
+	      avgs[m]+=rows[rowid][m]
+	  for j in range(len(avgs)):
+	    avgs[j]/=len(bestmatches[i])
+	  clusters[i]=avgs
+	  
+  return bestmatches
 
 
 
