@@ -3,7 +3,7 @@ def readfile(filename):
 	lines = [line for line in file(filename)]
 
 	# First line is the column titles
-	colnames = line[0].strip().split('\t')[1:]
+	colnames = lines[0].strip().split('\t')[1:]
 	rownames = []
 	data = []
 	for line in lines[1:]:
@@ -117,13 +117,23 @@ def printclust(clust,labels=None,n=0):
 	# now print the right and left branches
 	if clust.left!=None: printclust(clust.left,labels=labels,n=n+1)
 	if clust.right!=None: printclust(clust.right,labels=labels,n=n+1)
+
+
+def rotatematrix(data):
+  newdata=[]
+  for i in range(len(data[0])):
+    newrow=[data[j][i] for j in range(len(data))]
+    newdata.append(newrow)
+  return newdata
 		
 
 
 
 
 
-# where to put the endpoint horizontally
+
+
+# how long is the vertical line?
 def getheight(clust):
 	# Is this an endpoint? Then the height is just 1
 	if clust.left == None and clust.right == None: return 1
@@ -131,7 +141,7 @@ def getheight(clust):
 	# Otherwise the height is the same of the heights of each branch
 	return getheight(clust.left) + getheight(clust.right)
 
-# where to put the endpoint vertically
+# how long is the horizontal line?
 def getdepth(clust):
 	# The distance of and endpoint is 0
 	if clust.left == None and clust.right == None: return 0
@@ -152,7 +162,8 @@ def drawdendrogram(clust, labels, jpeg="clusters.jpg"):
 	img = Image.new('RGB', (w, h), (255, 255, 255))
 	draw = ImageDraw.Draw(img)
 
-	draw.line((0, h/2, 10, h/2), fill=(255, 0, 0))
+	# The very left first small horizontal line in the middle of the height
+	draw.line((0, h/2, 10, h/2), fill=(0, 0, 0))
 
 	# Draw the first node
 	drawnode(draw, clust, 10, (h/2), scaling, labels)
@@ -160,22 +171,30 @@ def drawdendrogram(clust, labels, jpeg="clusters.jpg"):
 
 
 def drawnode(draw,clust,x,y,scaling,labels):
+  
+  # If this is not an endpoint: there should be line.
   if clust.id<0:
-	h1=getheight(clust.left)*20
-	h2=getheight(clust.right)*20
+	h1=getheight(clust.left)*20 # vertical line up
+	h2=getheight(clust.right)*20 # vertical line down
 	top=y-(h1+h2)/2
 	bottom=y+(h1+h2)/2
-	# Line length
+
+	# the horizontal line length
 	ll=clust.distance*scaling
+
 	# Vertical line from this cluster to children
 	draw.line((x,top+h1/2,x,bottom-h2/2),fill=(255,0,0))
+
 	# Horizontal line to left item
 	draw.line((x,top+h1/2,x+ll,top+h1/2),fill=(255,0,0))
+
 	# Horizontal line to right item
 	draw.line((x,bottom-h2/2,x+ll,bottom-h2/2),fill=(255,0,0))
+
 	# Call the function to draw the left and right nodes
 	drawnode(draw,clust.left,x+ll,top+h1/2,scaling,labels)
 	drawnode(draw,clust.right,x+ll,bottom-h2/2,scaling,labels)
+
   else:
     # If this is an endpoint, draw the item label
     draw.text((x+5,y-7),labels[clust.id],(0,0,0))
