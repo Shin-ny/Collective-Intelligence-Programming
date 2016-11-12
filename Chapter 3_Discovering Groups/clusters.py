@@ -20,6 +20,7 @@ def readfile(filename):
 
 from math import sqrt
 
+
 def pearson(v1,v2):
   # Simple sums
   sum1=sum(v1)
