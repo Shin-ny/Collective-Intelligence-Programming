@@ -34,7 +34,7 @@ for i in range(1,51):
 			currentuser+=1
 
 
-out=file('zebo.txt','w')
+out=file('zeboNull.txt','w')
 out.write('Item')
 for user in range(0, currentuser): out.write('\tU%d' % user)
 out.write('\n')
