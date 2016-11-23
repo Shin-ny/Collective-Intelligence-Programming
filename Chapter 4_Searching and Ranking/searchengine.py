@@ -125,6 +125,89 @@ class crawler:
 		self.dbcommit()
 
 
+class searcher:
+	def __init__(self, dbname):
+		self.con = sqlite.connect(dbname)
+
+	def __del__(self):
+		self.con.close()
+
+	def getmatchrows(self, q):
+		# String to build the query
+		fieldlist = 'w0.urlid'
+		tablelist = ''
+		clauselist = ''
+		wordids = []
+
+		# Split the words by spaces
+		words = q.split(' ')
+		tablenumber = 0
+
+		for word in words:
+			# Get the word ID
+			wordrow = self.con.execute(
+				"select rowid from wordlist where word='%s'" % word).fetchone()
+			if wordrow != None:
+				wordid = wordrow[0]
+				wordids.append(wordid)
+
+				if tablenumber > 0:
+					tablelist += ','
+					clauselist += ' and '
+					clauselist += 'w%d.urlid=w%d.urlid and ' % (tablenumber-1, tablenumber)
+
+				fieldlist += ',w%d.location' % tablenumber
+				tablelist += 'wordlocation w%d' % tablenumber
+				clauselist += 'w%d.wordid=%d' % (tablenumber, wordid)
+				tablenumber += 1
+
+		# Create the query from the separate parts
+		fullquery = 'select %s from %s where %s' % (fieldlist, tablelist, clauselist)
+		cur = self.con.execute(fullquery)
+		rows = [row for row in cur]
+
+		return rows, wordids
+
+	def getscoredlist(self, rows, wordids):
+		totalscores = dict([(row[0], 0) for row in rows])
+
+		# This is where you'll later put the scoring functions
+		weights = [(1.0, self.frequencyscore(rows))]
+
+		for (weight, scores) in weights:
+			for url in totalscores:
+				totalscores[url] += weight * scores[url]
+
+		return totalscores
+
+	def geturlname(self, id):
+		return self.con.execute(
+			"select url from urllist where rowid=%d" % id).fetchone()[0]
+
+	def query(self, q):
+		rows, wordids = self.getmatchrows(q)
+		scores = self.getscoredlist(rows, wordids)
+		rankedscores = sorted([(score, url) for (url, score) in scores.items()], reverse = 1)
+		for (score, urlid) in rankedscores[0:10]:
+			print '%f\t%s' % (score, self.geturlname(urlid))
+
+	def normalizescores(self, scores, smallIsBetter = 0):
+		vsmall = 0.00001 # Avoid division by zero errors
+		if smallIsBetter:
+			minscore = min(scores.values())
+			return dict([(u, float(minscore)/max(vsmall, l)) for (u,l) \
+				in scores.items()])
+		else:
+			maxscore = max(scores.values())
+			if maxscore == 0: maxscore = vsmall
+			return dict([(u, float(c)/maxscore) for (u,c) in scores.items()])
+
+	def frequencyscore(self, rows):
+		counts = dict([(row[0], 0) for row in rows])
+		for row in rows: counts[row[0]] += 1
+		return self.normalizescores(counts)
+
+
 
 
 
