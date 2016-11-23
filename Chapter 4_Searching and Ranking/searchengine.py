@@ -85,6 +85,8 @@ class crawler:
 	# Starting with a list of pages, do a breadth
 	# first search to the given depth, indexing pages as we go
 	def crawl(self, pages, depth=2):
+	# pages = "http://www.fact-index.com/c/ca/categorical_list_of_programming_languages.html"
+
 		for i in range(depth):
 			newpages = set()
 			for page in pages:
