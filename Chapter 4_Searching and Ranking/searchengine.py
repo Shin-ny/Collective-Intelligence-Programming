@@ -206,7 +206,16 @@ class searcher:
 
 	def frequencyscore(self, rows):
 		counts = dict([(row[0], 0) for row in rows])
+		countspercent = dict([(row[0], 0) for row in rows])
 		for row in rows: counts[row[0]] += 1
+
+		for (url, frequency) in counts.iteritems():
+			res = self.con.execute(
+				'select count(*) as count from wordlocation where urlid = %d' % url).fetchone()
+			percent = float(frequency) / float(res[0])
+			countspercent[url] = percent
+
+		#return self.normalizescores(countspercent) # The percetage of the words are in the url
 		return self.normalizescores(counts)
 
 
