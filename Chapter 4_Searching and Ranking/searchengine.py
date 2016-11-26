@@ -3,6 +3,8 @@ import re
 from bs4 import *
 from urlparse import urljoin
 from sqlite3 import dbapi2 as sqlite
+import nn
+mynet = nn.searchnet('nn.db')
 
 # Create a list of words to ignore
 ignorewords=set(['the', 'of', 'to', 'and', 'a', 'in', 'is', 'it'])
@@ -212,12 +214,14 @@ class searcher:
 		totalscores = dict([(row[0], 0) for row in rows])
 
 		weights = [
-					(1.0, self.locationscore(rows)),
-					(1.0, self.frequencyscore(rows)),
+					#(1.0, self.locationscore(rows)),
+					#(1.0, self.frequencyscore(rows)),
 					#(1.0, self.distancescore(rows)),
 					#(1.0, self.inboundlinkscore(rows)),
 					(1.0, self.pagerankscore(rows)),
-					(1.0, self.linktextscore(rows, wordids))]
+					(1.0, self.linktextscore(rows, wordids)),
+					(1.0, self.nnscore(rows,wordids))
+					]
 
 		for (weight, scores) in weights:
 			for url in totalscores:
@@ -235,6 +239,9 @@ class searcher:
 		rankedscores = sorted([(score, url) for (url, score) in scores.items()], reverse = 1)
 		for (score, urlid) in rankedscores[0:10]:
 			print '%f\t%s' % (score, self.geturlname(urlid))
+
+		## connecting to the artificial neural network
+		# return wordids, [r[1] for r in rankedscores[0:10]]
 
 	def normalizescores(self, scores, smallIsBetter = 0):
 		vsmall = 0.00001 # Avoid division by zero errors
@@ -304,6 +311,14 @@ class searcher:
 						urlid = %d' % fromid).fetchone()[0]
 					linkscores[toid] += pr
 		return self.normalizescores(linkscores)
+
+	def nnscore(self, rows, wordids):
+		# Get unique URL IDs as an ordered list
+		urlids = [urlid for urlid in set([row[0] for row in rows])]
+		nnres = mynet.getresult(wordids, urlids)
+		scores = dict([(urlids[i], nnres[i]) for i in range(len(urlids))])
+		return self.normalizescores(scores)
+
 
 
 
