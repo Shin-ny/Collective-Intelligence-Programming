@@ -155,6 +155,7 @@ def geneticoptimize(domain, costf, popsize = 50,step = 1,
 			return vec[0:i] + [vec[i] - step] + vec[i+1:]
 		elif vec[i] < domain[i][1]:
 			return vec[0:i] + [vec[i] + step] + vec[i+1:]
+		else: return vec
 
 	# Crossover operation
 	def crossover(r1, r2):
@@ -170,6 +171,7 @@ def geneticoptimize(domain, costf, popsize = 50,step = 1,
 
 	# How many winners from each generation?
 	topelite = int(elite * popsize)
+
 
 	# Main loop
 	for i in range(maxiter):
