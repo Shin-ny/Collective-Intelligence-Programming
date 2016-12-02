@@ -49,6 +49,7 @@ def crosscount(v):
 			# If the fraciton is between 0 and 1 for both lines:
 			# Then they cross each other
 			if ua > 0 and ua < 1 and ub > 0 and ub < 1:
+				print "crossing!"
 				total += 1
 
 	# penalty when two nodes are two close
@@ -61,27 +62,27 @@ def crosscount(v):
 			dist = float(math.sqrt(math.pow(x1 - x2, 2) + math.pow(y1 - y2, 2)))
 			# Penalize any nodes closer than 50 pixels
 			if dist < 50:
+				print "too close two nodes"
 				total += (1.0 - (dist/50))
 
 	# penalty when the angel of links to one person is too small
+	count = dict([(z, []) for z in range(0, len(people))])
 	for i in range(len(links)):
-		count = []
-		for j in range(len(links)):
-			# the link to the same person
-			if links[i][0] == links[j][1]: 
-				count.append(j)
-			if links[i][0] == links[j][0] and i != j:
-				count.append(...)
-		print "i: %d" % i
-		print count
+		p1 = findpeople(links[i][0])
+		p2 = findpeople(links[i][1])	
+		if not ifrepete(p1, p2, count): count[p1].append(p2)
+		if not ifrepete(p2, p1, count): count[p2].append(p1)
+
+	for i in range(len(people)):
+
 		# iterate all the links to the same person
-		for x in count:		
-			degree = getdegree(i, x, loc)
-			if -45 < degree < 45: 
-				#print "degree: %d" % degree
-				#print "i: %d, x: %d" % (i, x)
-				total += 1
-				#print "too small angle"
+		for x in count[i]:	
+			for y in count[i]:
+				if x != y:
+					degree = getdegree(i, x, y, loc)
+					if degree < 45: 
+						total += (1.0 - (abs(degree)/45))
+						print "too small angle"
 
 	return total
 
@@ -106,23 +107,40 @@ def drawnetwork(sol, jpeg="networks.jpg"):
 
 	img.save(jpeg,'JPEG')
 
-def getdegree(i, j, loc):
+# find the degree of two links linking to the same person
+def getdegree(p, i, j, loc):
 	# Get the locations
-	(x1, y1), (x2, y2) = loc[links[i][0]], loc[links[i][1]]
-	(x3, y3), (x4, y4) = loc[links[j][0]], loc[links[j][1]]
+	(x1, y1), (x2, y2) = loc[people[p]], loc[people[i]]
+	(x3, y3), (x4, y4) = loc[people[p]], loc[people[j]]
 
 	dist1 = math.sqrt(math.pow(x1 - x2, 2) + math.pow(y1 - y2, 2))
 	dist2 = math.sqrt(math.pow(x3 - x4, 2) + math.pow(y3 - y4, 2))
-	crossproduct = (x1-x2)*(x4-x3)+(y1-y2)*(y4-y3)
+	crossproduct = (x2-x1)*(x4-x3)+(y2-y1)*(y4-y3)
 	cosine = crossproduct * 1.0 / ((dist1 * dist2) + 0.00001)
 	cos = clean_cos(cosine)
 	degree = math.acos(cos) * 360 / float(2 * math.pi)
 	return degree
 
+# checking if the cosine is in the range
 def clean_cos(cos_angle):
 	# when cosine = -1, it seems that it is barely below and 
 	# math.acos() will throw error
     return min(1,max(cos_angle,-1))
+
+# find the index of people using string: s
+def findpeople(s):
+	for x in range(len(people)):
+		if people[x] == s:
+			return x	
+	return -1
+
+# check if the link has exited in the count
+def ifrepete(p1, p2, count):
+	for x in count[p1]:
+		if x == p2: return True
+
+	return False
+
 
 
 
