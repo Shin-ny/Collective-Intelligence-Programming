@@ -12,6 +12,8 @@ people=[('Seymour', 'BOS'),
 # LaGuardia airport in New York
 destination = 'LGA'
 
+# domain = [(0,8)] * (len(optimization.people)*2)
+
 flights = {}
 
 for line in file('schedule.txt'):
@@ -29,8 +31,8 @@ def printschedule(r):
 	for d in range(len(r) / 2):
 		name = people[d][0]
 		origin = people[d][1]
-		out = flights[(origin, destination)][int(r[d])]
-		ret = flights[(destination, origin)][int(r[d+1])]
+		out = flights[(origin, destination)][int(r[d*2])]
+		ret = flights[(destination, origin)][int(r[d*2+1])]
 		print '%10s%10s %5s-%5s $%3s %5s-%5s $%3s' % (name, origin, 
 													out[0], out[1], out[2],
 													ret[0], ret[1], ret[2])
@@ -43,8 +45,8 @@ def schedulecost(sol):
 	for d in range(len(sol) / 2):
 		# Get the inbound and outbound flights
 		origin = people[d][1]
-		outbound = flights[(origin, destination)][int(sol[d])]
-		returnf = flights[(destination, origin)][int(sol[d + 1])]
+		outbound = flights[(origin, destination)][int(sol[d*2])]
+		returnf = flights[(destination, origin)][int(sol[d*2 + 1])]
 
 		# Total price is the price of all the outbound and return flights
 		totalprice += outbound[2]
@@ -59,15 +61,35 @@ def schedulecost(sol):
 	totalwait = 0
 	for d in range(len(sol) / 2):
 		origin = people[d][1]
-		outbound = flights[(origin, destination)][int(sol[d])]
-		returnf = flights[(destination, origin)][int(sol[d + 1])]
+		outbound = flights[(origin, destination)][int(sol[d*2])]
+		returnf = flights[(destination, origin)][int(sol[d * 2 + 1])]
 		totalwait += latestarrival - getminutes(outbound[1])
 		totalwait += getminutes(returnf[0]) - earliestdep
 
 	# Does this solution require an extra day of car rental?
 	if latestarrival > earliestdep: totalprice += 50
 
-	return totalprice + totalwait
+	# Add the plane time to be a cost
+	planecost = 0
+	for d in range(len(sol) / 2):
+		out = flights[(origin, destination)][int(sol[d*2])]
+		ret = flights[(destination, origin)][int(sol[d*2+1])]
+		planecost += getminutes(out[1]) - getminutes(out[0])
+		planecost += getminutes(ret[1]) - getminutes(ret[0])
+	planecost = planecost * 0.5
+
+	# Add a penalty of $20 for making anyone get to the airport before 8 a.m.
+	earlyplane = 0
+	for d in range(len(sol) / 2):
+		out = flights[(origin, destination)][int(sol[d*2])]
+		ret = flights[(destination, origin)][int(sol[d*2+1])]
+		if getminutes(out[0]) < 8 * 60:
+			earlyplane += 20
+		if getminutes(ret[0]) < 8 * 60:
+			earlyplane += 20
+
+
+	return totalprice + totalwait + planecost + earlyplane
 
 def randomoptimize(domain, costf):
 	best = 999999999
@@ -146,8 +168,44 @@ def annealingoptimize(domain, costf, T = 10000.0, cool = 0.95, step = 1):
 		T = T * cool
 	return vec
 
+def annealmultiplestart(domain, costf, T = 10000.0, cool = 0.95, step = 1, starts = 10):
+	vector = [0 for x in range(starts)] 
+	# Initialize the values randomly
+	for j in range(starts):
+		vector[j] = [float(random.randint(domain[i][0], domain[i][1])) 
+						for i in range(len(domain))]
+	best = vector[0]
+	for vec in vector:
+		while T>0.1:
+			# Choose one of the indices
+			i = random.randint(0, len(domain)-1)
+
+			# Choose a direction to change it
+			dir = random.randint(-step, step)
+
+			# Create a new list with one of the values changed
+			vecb = vec[:]
+			vecb[i] += dir
+			if vecb[i] < domain[i][0]: vecb[i] = domain[i][0]
+			elif vecb[i] > domain[i][1]: vecb[i] = domain[i][1]
+
+			# Caculate the current cost and the new cost
+			ea = costf(vec)
+			eb = costf(vecb)
+			p = pow(math.e, (-eb-ea) / T)
+
+			# Is it better, or does it make the probability cutoff?
+			if (eb < ea or random.random() < p):
+				vec = vecb
+
+			# Decrease the temperature
+			T = T * cool
+		if costf(best) > costf(vec): 
+			best = vec
+	return best
+
 def geneticoptimize(domain, costf, popsize = 50,step = 1,
-					mutprod = 0.2, elite = 0.2, maxiter = 100):
+					mutprod = 0.2, elite = 0.2, maxiter = 10000):
 	# Mutation Operation
 	def mutate(vec):
 		i = random.randint(0, len(domain) - 1)
@@ -172,12 +230,20 @@ def geneticoptimize(domain, costf, popsize = 50,step = 1,
 	# How many winners from each generation?
 	topelite = int(elite * popsize)
 
+	# The score of last population
+	oldscore = 100000
+	# How many iterations there is no improvment
+	iteration = 0
 
 	# Main loop
 	for i in range(maxiter):
 		scores = [(costf(v), v) for v in pop]
 		scores.sort()
 		ranked = [v for (s, v) in scores]
+		if oldscore == scores[0][0]:
+			iteration += 1
+		else:
+			iteration = 0
 
 		# Start with the pure winners
 		pop = ranked[0:topelite]
@@ -194,8 +260,10 @@ def geneticoptimize(domain, costf, popsize = 50,step = 1,
 				c2 = random.randint(0, topelite)
 				pop.append(crossover(ranked[c1], ranked[c2]))
 
+		oldscore = scores[0][0]
 		# Print current best score
 		print scores[0][0]
+		if iteration == 10: break
 
 	return scores[0][1]
 
